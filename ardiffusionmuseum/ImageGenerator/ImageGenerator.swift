@@ -7,6 +7,7 @@
 
 import UIKit
 import StableDiffusion
+import CoreML
 
 @MainActor
 final class ImageGenerator: NSObject, ObservableObject {
@@ -61,6 +62,7 @@ final class ImageGenerator: NSObject, ObservableObject {
 // MARK: - Stable Diffusion
 
 extension ImageGenerator {
+    // swiftlint:disable function_body_length
     func generateImages(of param: GenerationParameter, enableStableDiffusion: Bool) {
         guard generationState == .idle else { return }
 
@@ -79,8 +81,17 @@ extension ImageGenerator {
                     }
                     let resourceURL = URL(fileURLWithPath: path)
 
+                    let config = MLModelConfiguration()
+                    if !ProcessInfo.processInfo.isiOSAppOnMac {
+                        config.computeUnits = .cpuAndGPU
+                    }
                     debugLog("IG: creating StableDiffusionPipeline object... resosurceURL = \(resourceURL)")
-                    if let pipeline = try? StableDiffusionPipeline(resourcesAt: resourceURL) {
+
+                    // reduceMemory option was added at v0.1.0
+                    // On iOS, the reduceMemory option should be set to true
+                    let reduceMemory = ProcessInfo.processInfo.isiOSAppOnMac ? false : true
+                    if let pipeline = try? StableDiffusionPipeline( resourcesAt: resourceURL,
+                                                                    configuration: config, reduceMemory: reduceMemory) {
                         await self.setPipeline(pipeline)
                     } else {
                         fatalError("IG: Fatal error: failed to create the Stable-Diffusion-Pipeline.")
@@ -126,22 +137,28 @@ extension ImageGenerator {
     nonisolated func progressHandler(progress: StableDiffusionPipeline.Progress) -> Bool {
         debugLog("IG: Progress: step / stepCount = \(progress.step) / \(progress.stepCount)")
 
-        let generatedImages = GeneratedImages(parameter: GenerationParameter(prompt: progress.prompt,
-                                                             seed: 0,
-                                                             stepCount: progress.stepCount,
-                                                             imageCount: progress.currentImages.count,
-                                                             disableSafety: progress.isSafetyEnabled),
-                                              images: progress.currentImages.compactMap {
-            if let cgImage = $0 {
-                return UIImage(cgImage: cgImage)
-            } else {
-                return nil
-            }
-        })
+        if ProcessInfo.processInfo.isiOSAppOnMac {
+            let generatedImages = GeneratedImages(parameter: GenerationParameter(prompt: progress.prompt,
+                                                 seed: 0,
+                                                 stepCount: progress.stepCount,
+                                                 imageCount: progress.currentImages.count,
+                                                 disableSafety: progress.isSafetyEnabled),
+                                                 images: progress.currentImages.compactMap {
+                if let cgImage = $0 {
+                    return UIImage(cgImage: cgImage)
+                } else {
+                    return nil
+                }
+            })
 
-        DispatchQueue.main.async {
-            self.setGeneratedImages(generatedImages)
-            self.setProgressStep(step: progress.step, stepCount: progress.stepCount)
+            DispatchQueue.main.async {
+                self.setGeneratedImages(generatedImages)
+                self.setProgressStep(step: progress.step, stepCount: progress.stepCount)
+            }
+        } else {
+            DispatchQueue.main.async {
+                self.setProgressStep(step: progress.step, stepCount: progress.stepCount)
+            }
         }
 
         return true // continue

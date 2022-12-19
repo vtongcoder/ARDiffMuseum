@@ -6,8 +6,8 @@ An iOS app that generates images using Stable Diffusion and displays them in AR.
 
 You can generate images specifying any prompt (text) and display them on the wall in AR.
 
-- macOS 13.1 or newer, Xcode 14.1 or newer
-- iPhone 12+ / iOS 16.2+, iPad Pro with M1/M2 / iPadOS 16.2+
+- macOS 13.1 or newer, Xcode 14.2 or newer
+- iPhone Pro 12+ / iOS 16.2+, iPad Pro with M1/M2 / iPadOS 16.2+
 
 You can run the app on above mobile devices.
 And you can run the app on Mac, building as a Designed for iPad app.
@@ -27,6 +27,24 @@ There is a Readme in another GitHub Repository that explains how to add Stable D
 to your Xcode project. Please refer to it.
 
 - Image Generator with Stable Diffusion v2: https://github.com/ynagatomo/ImgGenSD2
+
+## Change Log
+- [1.0.2 (3)] - 2022-12-18 `[Merged]`
+    - merged the PR by Sergey Dikarev. It uses the configuration, `MLModelConfiguration.computeUnits = .cpuAndGPU`,
+    when creating a StableDiffusionPipeline. This configuration is suitable for mobile devices.
+    And it adds two entitlements, `Extended Virtual Addressing` and `Increased Memory Limit`.
+    They are suitable for an execution on iPhone.
+    - if you encounter signing and capability errors for the entitlements,
+    make sure that you are using the App ID which are registered the capabilities,
+    "Extended Virtual Address Space" and "Increased Memory Limit",
+    at Developer - Identifiers site.
+    - not use the `.cpuAndGPU` config when running on macOS, otherwise it causes errors.
+    - disable displaying intermediate images when running on devices, to improve the performance.
+
+- [1.0.1 (2)] - 2022-12-16 `[Changed]`
+    - use apple/ml-stable-diffusion Swift Package v0.1.0.
+    - set `reduceMemory` option of `StableDiffusionPipeline(resource:)` to `true`.
+    - iPhone requirements was changed to iPhone Pro 12+.
 
 ## Features
 
@@ -60,6 +78,15 @@ together often causes MPS internal errors.
 
 In action on iPad: image generation => AR display
 ![Image](images/ipad_960.jpg)
+
+## Related apps
+
+There are related app's repo on GitHub.
+
+- Img Gen SD2: https://github.com/ynagatomo/ImgGenSD2
+- AR Wall Picture: https://github.com/ynagatomo/ARWallPicture
+
+![Image](images/relatedapps.jpg)
 
 ## References
 
